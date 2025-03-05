@@ -13,6 +13,9 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
+  "bin": {
+    "els": "./bin/els.js"
+  },
   "dependencies": {
     "elysia": "^0.7.30",
     "@elysiajs/html": "^0.7.3",
