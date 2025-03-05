@@ -1,0 +1,181 @@
+<script>
+  import { onMount } from 'elysium';
+  
+  // State for todos
+  let todos = [];
+  let newTodoTitle = '';
+  let isLoading = true;
+  let error = null;
+  
+  // Fetch todos from API
+  async function fetchTodos() {
+    isLoading = true;
+    error = null;
+    
+    try {
+      const response = await fetch('/api/todos');
+      const data = await response.json();
+      
+      if (data.status >= 400) {
+        throw new Error(data.message || 'Failed to fetch todos');
+      }
+      
+      todos = data.data || [];
+    } catch (err) {
+      error = err.message;
+      console.error('Error fetching todos:', err);
+    } finally {
+      isLoading = false;
+    }
+  }
+  
+  // Add new todo
+  async function addTodo(event) {
+    event.preventDefault();
+    
+    if (!newTodoTitle.trim()) return;
+    
+    try {
+      const response = await fetch('/api/todos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title: newTodoTitle.trim() })
+      });
+      
+      const data = await response.json();
+      
+      if (data.status >= 400) {
+        throw new Error(data.message || 'Failed to add todo');
+      }
+      
+      // Add new todo to list
+      todos = [...todos, data.data];
+      newTodoTitle = '';
+    } catch (err) {
+      error = err.message;
+      console.error('Error adding todo:', err);
+    }
+  }
+  
+  // Toggle todo completion
+  async function toggleTodo(id, completed) {
+    try {
+      const response = await fetch(`/api/todos/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ completed: !completed })
+      });
+      
+      const data = await response.json();
+      
+      if (data.status >= 400) {
+        throw new Error(data.message || 'Failed to update todo');
+      }
+      
+      // Update todo in list
+      todos = todos.map(todo => 
+        todo.id === id ? { ...todo, completed: !completed } : todo
+      );
+    } catch (err) {
+      error = err.message;
+      console.error('Error updating todo:', err);
+    }
+  }
+  
+  // Delete todo
+  async function deleteTodo(id) {
+    try {
+      const response = await fetch(`/api/todos/${id}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.status >= 400) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to delete todo');
+      }
+      
+      // Remove todo from list
+      todos = todos.filter(todo => todo.id !== id);
+    } catch (err) {
+      error = err.message;
+      console.error('Error deleting todo:', err);
+    }
+  }
+  
+  // Load todos on mount
+  onMount(() => {
+    fetchTodos();
+  });
+</script>
+
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white shadow rounded-lg p-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Todo List</h1>
+    
+    {#if error}
+      <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6">
+        <p>{error}</p>
+      </div>
+    {/if}
+    
+    <!-- Add Todo Form -->
+    <form onsubmit={addTodo} class="mb-6">
+      <div class="flex">
+        <input
+          type="text"
+          value={newTodoTitle}
+          onchange={(e) => newTodoTitle = e.target.value}
+          placeholder="Add a new todo..."
+          class="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <button
+          type="submit"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-r-md"
+        >
+          Add
+        </button>
+      </div>
+    </form>
+    
+    <!-- Todo List -->
+    {#if isLoading}
+      <div class="text-center py-4">
+        <p class="text-gray-500">Loading todos...</p>
+      </div>
+    {:else if todos.length === 0}
+      <div class="text-center py-4 border-2 border-dashed border-gray-200 rounded-md">
+        <p class="text-gray-500">No todos yet. Add one above!</p>
+      </div>
+    {:else}
+      <ul class="divide-y divide-gray-200">
+        {#each todos as todo}
+          <li class="py-4 flex items-center justify-between">
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                checked={todo.completed}
+                onchange={() => toggleTodo(todo.id, todo.completed)}
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span 
+                class="ml-3 text-gray-900 {todo.completed ? 'line-through text-gray-500' : ''}"
+              >
+                {todo.title}
+              </span>
+            </div>
+            <button
+              onclick={() => deleteTodo(todo.id)}
+              class="text-red-600 hover:text-red-800"
+            >
+              Delete
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </div>
+</div>

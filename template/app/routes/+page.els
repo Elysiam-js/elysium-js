@@ -1,0 +1,94 @@
+<script>
+  import { onMount } from 'elysium';
+  
+  // State for the counter
+  let count = 0;
+  
+  // Increment counter
+  function increment() {
+    count += 1;
+  }
+  
+  // Decrement counter
+  function decrement() {
+    count -= 1;
+  }
+  
+  // Reset counter
+  function reset() {
+    count = 0;
+  }
+  
+  // Lifecycle hook
+  onMount(() => {
+    console.log('Home page mounted');
+  });
+</script>
+
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white shadow rounded-lg p-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Welcome to Elysium.js</h1>
+    
+    <p class="text-gray-600 mb-6">
+      This is a starter template for your Elysium.js application. It demonstrates basic components, state management, and HTMX integration.
+    </p>
+    
+    <div class="bg-blue-50 p-4 rounded-md mb-8">
+      <h2 class="text-xl font-semibold text-blue-800 mb-2">Counter Example</h2>
+      
+      <div class="flex items-center justify-center space-x-4 mb-4">
+        <button 
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+          onclick={decrement}
+        >
+          -
+        </button>
+        
+        <span class="text-2xl font-bold text-blue-800">{count}</span>
+        
+        <button 
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+          onclick={increment}
+        >
+          +
+        </button>
+        
+        <button 
+          class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded ml-4"
+          onclick={reset}
+        >
+          Reset
+        </button>
+      </div>
+    </div>
+    
+    <div class="bg-green-50 p-4 rounded-md mb-8">
+      <h2 class="text-xl font-semibold text-green-800 mb-2">HTMX Example</h2>
+      
+      <button 
+        class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded"
+        hx-get="/api/hello"
+        hx-target="#htmx-result"
+        hx-swap="innerHTML"
+      >
+        Load Data with HTMX
+      </button>
+      
+      <div id="htmx-result" class="mt-4 p-4 border border-green-200 rounded-md min-h-[50px]">
+        Result will appear here...
+      </div>
+    </div>
+    
+    <div class="border-t border-gray-200 pt-6 mt-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Next Steps</h2>
+      
+      <ul class="list-disc pl-5 space-y-2 text-gray-600">
+        <li>Explore the <code class="bg-gray-100 px-1 py-0.5 rounded">app</code> directory structure</li>
+        <li>Create new routes in <code class="bg-gray-100 px-1 py-0.5 rounded">app/routes</code></li>
+        <li>Add components in <code class="bg-gray-100 px-1 py-0.5 rounded">app/components</code></li>
+        <li>Set up your database models in <code class="bg-gray-100 px-1 py-0.5 rounded">app/models</code></li>
+        <li>Check out the documentation for more information</li>
+      </ul>
+    </div>
+  </div>
+</div>

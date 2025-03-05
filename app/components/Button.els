@@ -1,0 +1,63 @@
+<script>
+  // Props for the button component
+  const { 
+    type = 'button',
+    variant = 'primary',
+    size = 'md',
+    disabled = false,
+    onClick,
+    children,
+    className = '',
+    ...rest
+  } = props;
+  
+  // Variant styles
+  const variantStyles = {
+    primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+    secondary: 'bg-gray-600 hover:bg-gray-700 text-white',
+    success: 'bg-green-600 hover:bg-green-700 text-white',
+    danger: 'bg-red-600 hover:bg-red-700 text-white',
+    warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+    info: 'bg-cyan-500 hover:bg-cyan-600 text-white',
+    light: 'bg-gray-100 hover:bg-gray-200 text-gray-800',
+    dark: 'bg-gray-800 hover:bg-gray-900 text-white',
+    link: 'bg-transparent text-blue-600 hover:text-blue-800 hover:underline'
+  };
+  
+  // Size styles
+  const sizeStyles = {
+    sm: 'py-1 px-2 text-sm',
+    md: 'py-2 px-4 text-base',
+    lg: 'py-3 px-6 text-lg'
+  };
+  
+  // Disabled styles
+  const disabledStyles = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
+  
+  // Combine all styles
+  const buttonStyles = `
+    font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+    transition-colors duration-200 ease-in-out
+    ${variantStyles[variant] || variantStyles.primary}
+    ${sizeStyles[size] || sizeStyles.md}
+    ${disabledStyles}
+    ${className}
+  `;
+  
+  // Handle click event
+  function handleClick(event) {
+    if (!disabled && onClick) {
+      onClick(event);
+    }
+  }
+</script>
+
+<button 
+  type={type}
+  class={buttonStyles}
+  disabled={disabled}
+  onclick={handleClick}
+  {...rest}
+>
+  {children}
+</button>

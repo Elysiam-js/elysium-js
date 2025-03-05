@@ -1,0 +1,71 @@
+<script>
+  // Page title
+  const title = 'About Elysium.js';
+  
+  // Framework features
+  const features = [
+    {
+      title: 'BETH Stack',
+      description: 'Built on the BETH stack: Bun, Elysia, Turso, and HTMX.'
+    },
+    {
+      title: 'File-based Routing',
+      description: 'Intuitive file-based routing similar to SvelteKit and Next.js.'
+    },
+    {
+      title: 'Component System',
+      description: 'Lightweight component system with .els files for HTML templates with JavaScript logic.'
+    },
+    {
+      title: 'API Routes',
+      description: 'Easy-to-use API routes with standardized responses and error handling.'
+    },
+    {
+      title: 'Database Integration',
+      description: 'Flexible ORM support with Turso, Prisma, or Drizzle.'
+    },
+    {
+      title: 'Developer Experience',
+      description: 'Great developer experience with hot module reloading and type safety.'
+    }
+  ];
+</script>
+
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white shadow rounded-lg p-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">{title}</h1>
+    
+    <p class="text-gray-600 mb-6">
+      Elysium.js is a modern web framework built on top of Elysia and Bun, designed to provide a seamless developer experience while delivering high-performance applications.
+    </p>
+    
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Key Features</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {#each features as feature}
+          <div class="border border-gray-200 rounded-md p-4">
+            <h3 class="font-medium text-gray-900">{feature.title}</h3>
+            <p class="text-gray-600 mt-1">{feature.description}</p>
+          </div>
+        {/each}
+      </div>
+    </div>
+    
+    <div class="border-t border-gray-200 pt-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Getting Started</h2>
+      
+      <p class="text-gray-600 mb-4">
+        To create a new Elysium.js project, run the following command:
+      </p>
+      
+      <pre class="bg-gray-800 text-white p-4 rounded-md overflow-x-auto mb-4">
+        <code>bun create elysium app</code>
+      </pre>
+      
+      <p class="text-gray-600">
+        This will create a new project with all the necessary files and dependencies to get started.
+      </p>
+    </div>
+  </div>
+</div>
