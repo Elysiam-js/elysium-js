@@ -1,0 +1,135 @@
+<script>
+  import { onMount } from 'elysium-js';
+  
+  // Initialize state
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  // Function to make API requests
+  async function makeRequest(endpoint, method = 'GET', body = null) {
+    setLoading(true);
+    setResult(null);
+    
+    try {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      
+      const response = await fetch(`/api/examples/responses/${endpoint}`, options);
+      
+      if (response.status === 204) {
+        setResult({
+          status: 204,
+          message: 'No Content (204) - The server successfully processed the request and is not returning any content.'
+        });
+        return;
+      }
+      
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      setResult({
+        error: 'Error',
+        message: error.message,
+        statusCode: 500
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+  
+  onMount(() => {
+    console.log('Standard responses example mounted');
+  });
+</script>
+
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-4">Standard Response Examples</h1>
+  
+  <div class="mb-6">
+    <p class="mb-4">
+      This example demonstrates Elysium.js standardized response formats. Click the buttons below to see different response types.
+    </p>
+    
+    <div class="flex flex-wrap gap-4 mb-8">
+      <button 
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        onclick={() => makeRequest('success')}
+        disabled={loading}
+      >
+        Success (200)
+      </button>
+      
+      <button 
+        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        onclick={() => makeRequest('created', 'POST', { name: 'New Resource', type: 'example' })}
+        disabled={loading}
+      >
+        Created (201)
+      </button>
+      
+      <button 
+        class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+        onclick={() => makeRequest('accepted', 'POST')}
+        disabled={loading}
+      >
+        Accepted (202)
+      </button>
+      
+      <button 
+        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+        onclick={() => makeRequest(`no-content/${Math.floor(Math.random() * 1000)}`, 'DELETE')}
+        disabled={loading}
+      >
+        No Content (204)
+      </button>
+    </div>
+    
+    {#if loading}
+      <div class="animate-pulse bg-gray-100 p-4 rounded">
+        Loading...
+      </div>
+    {/if}
+    
+    {#if result}
+      <div class="bg-gray-100 p-4 rounded">
+        <h2 class="text-xl font-bold mb-2">Response:</h2>
+        <pre class="bg-gray-800 text-white p-4 rounded overflow-x-auto">
+          {JSON.stringify(result, null, 2)}
+        </pre>
+      </div>
+    {/if}
+  </div>
+  
+  <div class="mt-8 bg-gray-100 p-4 rounded">
+    <h2 class="text-xl font-bold mb-2">How to Use Standard Responses in Elysium.js</h2>
+    
+    <pre class="bg-gray-800 text-white p-4 rounded overflow-x-auto">
+import { Elysia } from 'elysia';
+
+export default (app: Elysia) =>
+  app.group('/api/users', (app) =>
+    app
+      .get('/', ({ success }) => {
+        const users = [{ id: 1, name: 'John' }];
+        return success(users, 'Users retrieved successfully');
+      })
+      .post('/', ({ body, created }) => {
+        const newUser = { id: 2, name: body.name };
+        return created(newUser, 'User created successfully');
+      })
+      .delete('/:id', ({ params, noContent }) => {
+        // Delete user logic here
+        return noContent();
+      })
+  );
+    </pre>
+  </div>
+</div>

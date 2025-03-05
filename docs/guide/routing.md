@@ -2,6 +2,10 @@
 
 Elysium-js uses a file-based routing system similar to SvelteKit's app router. Routes are defined in the `app/routes` directory.
 
+::: tip Auto Router
+Elysium-js now includes an automatic routing system that eliminates the need to manually register routes. See the [Auto Router](./auto-router) guide for details.
+:::
+
 ## Page Routes
 
 Page routes are used to render HTML pages. They are defined in the `app/routes` directory.
@@ -12,7 +16,8 @@ Create a new file in `app/routes` to define a page route:
 
 ```tsx
 // app/routes/example.tsx
-export const ExamplePage = () => {
+// Using the auto router pattern with default export
+const ExamplePage = () => {
   return (
     <div>
       <h1>Example Page</h1>
@@ -20,9 +25,11 @@ export const ExamplePage = () => {
     </div>
   );
 };
+
+export default ExamplePage;
 ```
 
-Then register it in `app/routes/index.ts`:
+If you're not using the auto router, you'll need to register it manually in `app/routes/index.ts`:
 
 ```typescript
 import { ExamplePage } from './example';
@@ -41,6 +48,22 @@ export const setupRoutes = new Elysia()
 You can use route parameters to capture values from the URL:
 
 ```typescript
+// When using auto router, create a file at app/routes/users/[id].tsx
+const UserPage = ({ params }) => {
+  return (
+    <div>
+      <h1>User Profile</h1>
+      <p>User ID: {params.id}</p>
+    </div>
+  );
+};
+
+export default UserPage;
+```
+
+Or manually register the route:
+
+```typescript
 // app/routes/index.ts
 export const setupRoutes = new Elysia()
   // ... existing routes
@@ -51,21 +74,25 @@ export const setupRoutes = new Elysia()
   ));
 ```
 
-```tsx
-// app/routes/users.tsx
-export const UserPage = ({ id }: { id: string }) => {
-  return (
-    <div>
-      <h1>User Profile</h1>
-      <p>User ID: {id}</p>
-    </div>
-  );
-};
-```
-
 ### Query Parameters
 
 You can access query parameters from the URL:
+
+```typescript
+// When using auto router, create a file at app/routes/search.tsx
+const SearchPage = ({ query }) => {
+  return (
+    <div>
+      <h1>Search Results</h1>
+      <p>Query: {query.q}</p>
+    </div>
+  );
+};
+
+export default SearchPage;
+```
+
+Or manually register the route:
 
 ```typescript
 // app/routes/index.ts
@@ -78,23 +105,32 @@ export const setupRoutes = new Elysia()
   ));
 ```
 
-```tsx
-// app/routes/search.tsx
-export const SearchPage = ({ query }: { query?: string }) => {
-  return (
-    <div>
-      <h1>Search Results</h1>
-      <p>Query: {query || 'No query provided'}</p>
-    </div>
-  );
-};
-```
-
 ## API Routes
 
 API routes are used to create RESTful APIs. They are defined in the `app/routes/api` directory.
 
 ### Creating an API Route
+
+```typescript
+// When using auto router, create a file at app/routes/api/example.ts
+import { Elysia, t } from 'elysia';
+
+const exampleRoutes = new Elysia({ prefix: '/example' })
+  .get('/', () => {
+    return { message: 'Hello from the API!' };
+  })
+  .post('/', ({ body }) => {
+    return { message: `Received: ${body.data}` };
+  }, {
+    body: t.Object({
+      data: t.String()
+    })
+  });
+
+export default exampleRoutes;
+```
+
+Or manually register the route:
 
 ```typescript
 // app/routes/api/example.ts
@@ -130,6 +166,31 @@ export const setupRoutes = new Elysia()
 You can use route parameters in API routes:
 
 ```typescript
+// When using auto router, create a file at app/routes/api/users/[id].ts
+import { Elysia } from 'elysia';
+import { db } from '../../db';
+import { users } from '../../models/user';
+import { eq } from 'drizzle-orm';
+
+const userRoutes = new Elysia({ prefix: '/users' })
+  .get('/:id', async ({ params }) => {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, parseInt(params.id))
+    });
+    
+    if (!user) {
+      return new Response('User not found', { status: 404 });
+    }
+    
+    return user;
+  });
+
+export default userRoutes;
+```
+
+Or manually register the route:
+
+```typescript
 // app/routes/api/users.ts
 import { Elysia } from 'elysia';
 import { db } from '../../db';
@@ -153,6 +214,28 @@ export const userRoutes = new Elysia({ prefix: '/users' })
 ### Validation
 
 Elysia provides built-in validation for request bodies, query parameters, and route parameters:
+
+```typescript
+// When using auto router, create a file at app/routes/api/todos.ts
+import { Elysia, t } from 'elysia';
+import { db } from '../../db';
+import { todos } from '../../models/todo';
+
+const todoRoutes = new Elysia({ prefix: '/todos' })
+  .post('/', async ({ body }) => {
+    const newTodo = await db.insert(todos).values(body).returning();
+    return newTodo[0];
+  }, {
+    body: t.Object({
+      title: t.String(),
+      completed: t.Optional(t.Boolean())
+    })
+  });
+
+export default todoRoutes;
+```
+
+Or manually register the route:
 
 ```typescript
 // app/routes/api/todos.ts
@@ -211,7 +294,10 @@ You can use HTMX to create interactive UIs without writing JavaScript. Here's an
 
 ```tsx
 // app/routes/home.tsx
-export const HomePage = () => {
+import { Elysia } from 'elysia';
+import { html } from '@elysiajs/html';
+
+const HomePage = () => {
   return (
     <div>
       <h1>Todo List</h1>
@@ -232,6 +318,8 @@ export const HomePage = () => {
     </div>
   );
 };
+
+export default HomePage;
 ```
 
 ```typescript
@@ -241,7 +329,7 @@ import { html } from '@elysiajs/html';
 import { db } from '../../db';
 import { todos } from '../../models/todo';
 
-export const todoRoutes = new Elysia({ prefix: '/todos' })
+const todoRoutes = new Elysia({ prefix: '/todos' })
   .get('/', async ({ html }) => {
     const allTodos = await db.query.todos.findMany();
     
@@ -299,6 +387,8 @@ export const todoRoutes = new Elysia({ prefix: '/todos' })
       completed: t.Optional(t.Boolean())
     })
   });
+
+export default todoRoutes;
 ```
 
 This example demonstrates how to:

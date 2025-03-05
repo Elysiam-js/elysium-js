@@ -25,6 +25,10 @@ Elysium-js provides a complete solution for building web applications with a foc
     Elysium-js follows a project structure similar to SvelteKit, making it intuitive for developers familiar with modern frameworks.
   </GlassyCard>
 
+  <GlassyCard title="Auto Router" icon="🧭">
+    File-based routing system that automatically maps your file structure to URL routes, eliminating manual route registration.
+  </GlassyCard>
+
   <GlassyCard title="TypeScript Support" icon="📝">
     Built with TypeScript from the ground up, providing type safety throughout your application.
   </GlassyCard>

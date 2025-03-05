@@ -23,6 +23,7 @@ export default {
           text: 'Core Concepts',
           items: [
             { text: 'Routing', link: '/guide/routing' },
+            { text: 'Auto Router', link: '/guide/auto-router' },
             { text: 'Layouts', link: '/guide/layouts' },
             { text: 'Database Integration', link: '/guide/database' },
             { text: 'HTMX Integration', link: '/guide/htmx' }

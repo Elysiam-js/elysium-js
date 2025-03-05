@@ -16,6 +16,20 @@ A modern full-stack web application built with the BETH stack:
 - Modern CSS with Tailwind
 - SvelteKit-inspired project structure
 - Easy project creation with CLI
+- SvelteKit-inspired component syntax with `.els` files
+- Built-in Swagger UI documentation
+- CORS protection
+- HTTP client with Axios
+- Environment variable support
+- Integrated logging system
+- Standardized error handling
+- Standardized API responses
+- JWT authentication
+- Task scheduling with cron
+- ORM integration (Turso, Prisma, Drizzle)
+- WebSockets support (optional)
+- GraphQL support (optional)
+- Scheduled tasks (optional)
 
 ## Prerequisites
 
@@ -30,6 +44,12 @@ bun create elysium app
 During project creation, you'll be prompted to select:
 - ORM (Turso, Prisma, or Drizzle)
 - Whether to use Tailwind CSS
+- Whether to use Prettier
+- Whether to use ESLint
+- Whether to include WebSockets support
+- Whether to include GraphQL support
+- Whether to include scheduled tasks
+- Whether to include Swagger documentation
 
 ## Getting Started
 
@@ -84,12 +104,42 @@ elysium-js/
 └── tsconfig.json
 ```
 
+## File Conventions
+
+Elysium-js uses a file-based routing system with specific file extensions:
+
+- **`.els`**: Component files (pages, layouts, error boundaries, loading states)
+- **`.ts`**: Server-side files (data loading, API endpoints, utilities)
+
+Special files:
+- `+page.els`: Page component
+- `+layout.els`: Layout component
+- `+error.els`: Error boundary
+- `+loading.els`: Loading state
+- `+page.server.ts`: Server-side data loading for pages
+- `+layout.server.ts`: Server-side data loading for layouts
+- `+server.ts`: API endpoint
+
+## Documentation
+
+- [Getting Started](./docs/getting-started.md)
+- [Project Structure](./docs/project-structure.md)
+- [Routing](./docs/routing.md)
+- [Components](./docs/components.md)
+- [Data Fetching](./docs/data-fetching.md)
+- [Plugins](./docs/plugins.md)
+- [Error Handling](./docs/errors.md)
+- [Standard Responses](./docs/responses.md)
+- [Authentication](./docs/auth.md)
+- [Task Scheduling](./docs/cron.md)
+- [ORM Integration](./docs/orm.md)
+- [Deployment](./docs/deployment.md)
+
 ## Development
 
 - **Adding a new page**:
-  1. Create a new component in `app/routes/`
-  2. Add a new route in `app/routes/index.ts`
-
+  1. Create a new component in `app/routes/` with the `.els` extension
+  2. For server-side data, add a corresponding `.server.ts` file
 - **Adding a new API endpoint**:
   1. Create a new file in `app/routes/api/`
   2. Add the route to `app/routes/index.ts`
