@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#6D28D9" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(139, 92, 246, 0.8)" />
+      <stop offset="100%" stop-color="rgba(109, 40, 217, 0.8)" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Glass background -->
+  <rect width="128" height="128" rx="24" fill="url(#glass)" filter="url(#glow)" />
+  
+  <!-- Glassy effect -->
+  <rect width="128" height="64" rx="24" fill="rgba(255, 255, 255, 0.1)" />
+  
+  <!-- Border -->
+  <rect width="126" height="126" x="1" y="1" rx="23" fill="none" stroke="rgba(255, 255, 255, 0.3)" stroke-width="2" />
+  
+  <!-- Text with glow -->
+  <text x="64" y="80" font-family="Arial, sans-serif" font-size="72" font-weight="bold" text-anchor="middle" fill="white" filter="url(#glow)">E</text>
+</svg>

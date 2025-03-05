@@ -1,0 +1,166 @@
+/* Additional custom styles for the theme */
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
+
+/* Glassy card effect for all content blocks */
+.vp-doc > div > div {
+  position: relative;
+  z-index: 1;
+}
+
+.vp-doc > div > div::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(139, 92, 246, 0.03);
+  border-radius: 12px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.vp-doc > div > div:hover::before {
+  opacity: 1;
+}
+
+/* Purple selection color */
+::selection {
+  background: rgba(139, 92, 246, 0.3);
+  color: var(--vp-c-text-1);
+}
+
+/* Enhance code blocks with purple accents */
+.vp-doc div[class*='language-'] code {
+  color: #c4b5fd;
+}
+
+.vp-doc div[class*='language-'] .highlight-lines .highlighted {
+  background-color: rgba(139, 92, 246, 0.15);
+}
+
+/* Enhance tables with purple accents */
+.vp-doc table th {
+  background-color: rgba(139, 92, 246, 0.1);
+}
+
+/* Enhance blockquotes with purple accents */
+.vp-doc blockquote {
+  border-left: 4px solid var(--vp-c-brand);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+/* Custom styles for dark mode */
+.dark .vp-doc h1,
+.dark .vp-doc h2,
+.dark .vp-doc h3,
+.dark .vp-doc h4,
+.dark .vp-doc h5,
+.dark .vp-doc h6 {
+  color: #c4b5fd;
+}
+
+/* Glassy effect for the entire page in dark mode */
+.dark {
+  background: 
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent 70%), 
+    radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.1), transparent 70%),
+    var(--vp-c-bg) !important;
+  background-attachment: fixed;
+}
+
+/* Enhance sidebar items with purple accents */
+.dark .VPSidebarItem.is-active .text {
+  color: #c4b5fd;
+}
+
+.dark .VPSidebarItem.is-active .link {
+  background-color: rgba(139, 92, 246, 0.15);
+}
+
+/* Custom styles for the search box */
+.VPNavBarSearch .DocSearch-Button {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  transition: all 0.3s ease;
+}
+
+.VPNavBarSearch .DocSearch-Button:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.VPNavBarSearch .DocSearch-Button .DocSearch-Search-Icon {
+  color: var(--vp-c-brand);
+}
+
+/* Animated gradient border for active nav items */
+.VPNavBarMenu .VPNavBarMenuLink.active {
+  position: relative;
+  color: var(--vp-c-brand-lighter);
+}
+
+.VPNavBarMenu .VPNavBarMenuLink.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--vp-c-brand-light), var(--vp-c-brand-lighter), var(--vp-c-brand-light));
+  background-size: 200% 100%;
+  animation: gradientBorder 3s linear infinite;
+}
+
+@keyframes gradientBorder {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Glowing effect for buttons */
+.VPButton {
+  position: relative;
+  overflow: hidden;
+}
+
+.VPButton::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.VPButton:hover::after {
+  opacity: 1;
+}

@@ -1,0 +1,214 @@
+:root {
+  --vp-c-brand: #8b5cf6;
+  --vp-c-brand-light: #a78bfa;
+  --vp-c-brand-lighter: #c4b5fd;
+  --vp-c-brand-dark: #7c3aed;
+  --vp-c-brand-darker: #6d28d9;
+  
+  --vp-c-sponsor: #8b5cf6;
+  
+  --vp-c-bg-elev: rgba(114, 63, 238, 0.09);
+  --vp-c-bg-elev-up: rgba(114, 63, 238, 0.12);
+  
+  /* Custom glassy effect variables */
+  --glass-bg: rgba(139, 92, 246, 0.1);
+  --glass-border: rgba(139, 92, 246, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.15);
+  --glass-blur: 8px;
+}
+
+/* Glassy navbar */
+.VPNav {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Glassy sidebar */
+.VPSidebar {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border-right: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Glassy cards */
+.VPFeature {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.25);
+}
+
+/* Glassy code blocks */
+.vp-doc div[class*='language-'] {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Custom buttons */
+.VPButton.brand {
+  background: linear-gradient(135deg, var(--vp-c-brand-light), var(--vp-c-brand-dark));
+  border: none;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.VPButton.brand:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(139, 92, 246, 0.5);
+}
+
+/* Gradient text for headings */
+.vp-doc h1 {
+  background: linear-gradient(135deg, #c4b5fd, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+/* Gradient divider */
+.vp-doc hr {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--vp-c-brand), transparent);
+  border: none;
+  margin: 2rem 0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
+
+/* Custom background with subtle gradient */
+body {
+  background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent 70%), 
+              radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.1), transparent 70%),
+              var(--vp-c-bg) !important;
+  background-attachment: fixed;
+}
+
+/* Animated glow for links */
+.vp-doc a {
+  position: relative;
+  color: var(--vp-c-brand-light);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.vp-doc a:hover {
+  color: var(--vp-c-brand-lighter);
+}
+
+.vp-doc a::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, var(--vp-c-brand-light), var(--vp-c-brand-lighter));
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.3s ease;
+}
+
+.vp-doc a:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Custom table styling */
+.vp-doc table {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.vp-doc tr:nth-child(2n) {
+  background-color: rgba(139, 92, 246, 0.05);
+}
+
+.vp-doc th {
+  background-color: rgba(139, 92, 246, 0.1);
+}
+
+/* Custom blockquote */
+.vp-doc blockquote {
+  border-left: 4px solid var(--vp-c-brand);
+  background: var(--glass-bg);
+  border-radius: 0 8px 8px 0;
+  padding: 16px 20px;
+  margin: 16px 0;
+  box-shadow: var(--glass-shadow);
+}
+
+/* Custom badge */
+.vp-doc .custom-block {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 8px;
+}
+
+/* Hero section enhancements */
+.VPHero .name,
+.VPHero .text {
+  background: linear-gradient(135deg, #c4b5fd, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.VPHero .tagline {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Logo glow effect */
+.VPImage.logo {
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
+}
+
+/* Footer styling */
+.VPFooter {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg) !important;
+  border-top: 1px solid var(--glass-border);
+}

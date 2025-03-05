@@ -1,0 +1,30 @@
+{
+  "name": "elysium-js",
+  "version": "0.1.0",
+  "description": "A full-stack BETH (Bun, Elysia, Turso, HTMX) application",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist",
+    "test": "bun test",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "dependencies": {
+    "elysia": "^0.7.30",
+    "@elysiajs/html": "^0.7.3",
+    "@elysiajs/static": "^0.7.1",
+    "@libsql/client": "^0.4.0-pre.5",
+    "drizzle-orm": "^0.28.6",
+    "drizzle-kit": "^0.19.13"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.3.3",
+    "vitepress": "^1.0.0-rc.40",
+    "vue": "^3.3.11"
+  }
+}
