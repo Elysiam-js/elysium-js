@@ -5,7 +5,6 @@
  */
 
 import { Elysia } from 'elysia';
-import { cors } from '@elysiajs/cors';
 
 /**
  * Configure CORS for Elysium.js
@@ -34,16 +33,38 @@ export function setupCors(
     maxAge = 86400,
   } = options;
   
-  return app.use(
-    cors({
-      origin,
-      methods,
-      allowedHeaders,
-      exposedHeaders,
-      credentials,
-      maxAge,
-    })
-  );
+  // Implement CORS manually without the dependency
+  return app.onRequest(({ request, set }) => {
+    const requestOrigin = request.headers.get('origin');
+    
+    // Set CORS headers
+    if (origin === '*') {
+      set.headers['Access-Control-Allow-Origin'] = '*';
+    } else if (typeof origin === 'string') {
+      set.headers['Access-Control-Allow-Origin'] = origin;
+    } else if (Array.isArray(origin) && requestOrigin) {
+      if (origin.includes(requestOrigin)) {
+        set.headers['Access-Control-Allow-Origin'] = requestOrigin;
+      }
+    }
+    
+    // Set other CORS headers
+    set.headers['Access-Control-Allow-Methods'] = methods.join(', ');
+    set.headers['Access-Control-Allow-Headers'] = allowedHeaders.join(', ');
+    
+    if (exposedHeaders.length > 0) {
+      set.headers['Access-Control-Expose-Headers'] = exposedHeaders.join(', ');
+    }
+    
+    if (credentials) {
+      set.headers['Access-Control-Allow-Credentials'] = 'true';
+    }
+    
+    set.headers['Access-Control-Max-Age'] = maxAge.toString();
+  }).options('*', ({ set }) => {
+    set.status = 204;
+    return '';
+  });
 }
 
 export default { setupCors };

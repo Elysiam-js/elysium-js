@@ -5,7 +5,6 @@
  */
 
 import { Elysia, t } from 'elysia';
-import jwt from 'jsonwebtoken';
 
 // Default options
 const defaultOptions = {
@@ -26,11 +25,116 @@ export interface JwtPayload {
   [key: string]: any;
 }
 
+// Simple JWT implementation
+class SimpleJwt {
+  private secret: string;
+  
+  constructor(secret: string) {
+    this.secret = secret;
+  }
+  
+  /**
+   * Sign a JWT token
+   */
+  sign(payload: JwtPayload, options: any = {}): string {
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = options.expiresIn || defaultOptions.expiresIn;
+    const exp = now + (typeof expiresIn === 'string' 
+      ? parseInt(expiresIn) * 86400 // Convert days to seconds
+      : expiresIn);
+    
+    const tokenPayload = {
+      ...payload,
+      iat: now,
+      exp,
+      iss: options.issuer || defaultOptions.issuer,
+      aud: options.audience || defaultOptions.audience
+    };
+    
+    // Base64 encode the header and payload
+    const header = this.base64UrlEncode(JSON.stringify({ 
+      alg: options.algorithm || defaultOptions.algorithm, 
+      typ: 'JWT' 
+    }));
+    const encodedPayload = this.base64UrlEncode(JSON.stringify(tokenPayload));
+    
+    // Create signature
+    const signature = this.createSignature(`${header}.${encodedPayload}`, this.secret);
+    
+    // Return the complete token
+    return `${header}.${encodedPayload}.${signature}`;
+  }
+  
+  /**
+   * Verify a JWT token
+   */
+  verify(token: string): JwtPayload | null {
+    try {
+      const [headerB64, payloadB64, signatureB64] = token.split('.');
+      
+      // Verify signature
+      const expectedSignature = this.createSignature(`${headerB64}.${payloadB64}`, this.secret);
+      if (signatureB64 !== expectedSignature) {
+        return null;
+      }
+      
+      // Decode payload
+      const payload = JSON.parse(this.base64UrlDecode(payloadB64)) as JwtPayload;
+      
+      // Check expiration
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < now) {
+        return null;
+      }
+      
+      return payload;
+    } catch (error) {
+      return null;
+    }
+  }
+  
+  /**
+   * Base64Url encode a string
+   */
+  private base64UrlEncode(str: string): string {
+    return Buffer.from(str)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+  }
+  
+  /**
+   * Base64Url decode a string
+   */
+  private base64UrlDecode(str: string): string {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) {
+      str += '=';
+    }
+    return Buffer.from(str, 'base64').toString();
+  }
+  
+  /**
+   * Create a simple HMAC signature
+   */
+  private createSignature(data: string, secret: string): string {
+    // Simple HMAC implementation using crypto module
+    const crypto = require('crypto');
+    return this.base64UrlEncode(
+      crypto.createHmac('sha256', secret)
+        .update(data)
+        .digest('base64')
+    );
+  }
+}
+
 /**
  * JWT Authentication plugin
  */
 export function jwtAuth(options = {}) {
   const config = { ...defaultOptions, ...options };
+  const jwtInstance = new SimpleJwt(config.secret);
   
   return (app: Elysia) => 
     app
@@ -43,9 +147,9 @@ export function jwtAuth(options = {}) {
          * @returns Signed JWT token
          */
         sign: (payload: JwtPayload, options = {}) => {
-          return jwt.sign(payload, config.secret, {
+          return jwtInstance.sign(payload, {
             expiresIn: config.expiresIn,
-            algorithm: config.algorithm as jwt.Algorithm,
+            algorithm: config.algorithm,
             issuer: config.issuer,
             audience: config.audience,
             ...options,
@@ -56,54 +160,22 @@ export function jwtAuth(options = {}) {
          * Verify a JWT token
          * 
          * @param token - JWT token to verify
-         * @param options - JWT verify options
-         * @returns Decoded token payload
+         * @returns Decoded token payload or null if invalid
          */
-        verify: (token: string, options = {}) => {
-          return jwt.verify(token, config.secret, {
-            issuer: config.issuer,
-            audience: config.audience,
-            ...options,
-          }) as JwtPayload;
+        verify: (token: string) => {
+          return jwtInstance.verify(token);
         },
         
         /**
          * Decode a JWT token without verification
          * 
          * @param token - JWT token to decode
-         * @returns Decoded token payload or null if invalid
+         * @returns Decoded token payload
          */
         decode: (token: string) => {
-          return jwt.decode(token) as JwtPayload | null;
+          const [, payloadB64] = token.split('.');
+          return JSON.parse(Buffer.from(payloadB64, 'base64').toString());
         },
-      })
-      .derive(({ headers, error }) => {
-        return {
-          /**
-           * Get the authenticated user from the JWT token
-           * 
-           * @returns The authenticated user
-           * @throws Unauthorized error if no valid token is found
-           */
-          getAuthUser: () => {
-            const authHeader = headers.authorization;
-            
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-              throw error.Unauthorized('Missing or invalid authorization header');
-            }
-            
-            const token = authHeader.substring(7);
-            
-            try {
-              return jwt.verify(token, config.secret, {
-                issuer: config.issuer,
-                audience: config.audience,
-              }) as JwtPayload;
-            } catch (err) {
-              throw error.Unauthorized('Invalid or expired token');
-            }
-          },
-        };
       });
 }
 
@@ -113,8 +185,8 @@ export function jwtAuth(options = {}) {
  * @returns Middleware function that checks for a valid JWT token
  */
 export function authenticate() {
-  return (app: Elysia) =>
-    app.derive(({ headers, error }) => {
+  return (app: Elysia) => 
+    app.derive(({ headers, jwt, error }) => {
       const authHeader = headers.authorization;
       
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -122,14 +194,18 @@ export function authenticate() {
       }
       
       const token = authHeader.substring(7);
-      const jwt = app.store.jwt;
+      const payload = jwt.verify(token);
       
-      try {
-        const user = jwt.verify(token);
-        return { user };
-      } catch (err) {
+      if (!payload) {
         throw error.Unauthorized('Invalid or expired token');
       }
+      
+      return {
+        auth: {
+          user: payload,
+          token,
+        },
+      };
     });
 }
 

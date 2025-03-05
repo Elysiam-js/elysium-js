@@ -1,12 +1,103 @@
 /**
  * Cron Job Scheduler Plugin for Elysium.js
  * 
- * Provides task scheduling capabilities using node-cron
+ * Provides task scheduling capabilities for recurring tasks
  */
 
 import { Elysia } from 'elysia';
-import cron from 'node-cron';
-import { logger } from './logger';
+
+// Simple cron implementation
+class SimpleCron {
+  private static readonly CRON_REGEX = /^(\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\*\/([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\*|([0-9]|1[0-9]|2[0-3])|\*\/([0-9]|1[0-9]|2[0-3])) (\*|([1-9]|1[0-9]|2[0-9]|3[0-1])|\*\/([1-9]|1[0-9]|2[0-9]|3[0-1])) (\*|([1-9]|1[0-2])|\*\/([1-9]|1[0-2])) (\*|([0-6])|\*\/([0-6]))$/;
+  
+  private interval: NodeJS.Timeout | null = null;
+  private lastRun: Date = new Date(0);
+  private readonly expression: string;
+  private readonly callback: () => void;
+  private readonly options: { timezone?: string } = {};
+  
+  constructor(expression: string, callback: () => void, options: { timezone?: string } = {}) {
+    this.expression = expression;
+    this.callback = callback;
+    this.options = options;
+  }
+  
+  public static validate(expression: string): boolean {
+    return SimpleCron.CRON_REGEX.test(expression);
+  }
+  
+  private parseExpression(): { minute: number[], hour: number[], day: number[], month: number[], dayOfWeek: number[] } {
+    const parts = this.expression.split(' ');
+    
+    return {
+      minute: this.parsePart(parts[0], 0, 59),
+      hour: this.parsePart(parts[1], 0, 23),
+      day: this.parsePart(parts[2], 1, 31),
+      month: this.parsePart(parts[3], 1, 12),
+      dayOfWeek: this.parsePart(parts[4], 0, 6),
+    };
+  }
+  
+  private parsePart(part: string, min: number, max: number): number[] {
+    if (part === '*') {
+      return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+    }
+    
+    if (part.includes('/')) {
+      const [_, step] = part.split('/');
+      const stepNum = parseInt(step, 10);
+      const result = [];
+      for (let i = min; i <= max; i += stepNum) {
+        result.push(i);
+      }
+      return result;
+    }
+    
+    return [parseInt(part, 10)];
+  }
+  
+  private matchesDate(date: Date): boolean {
+    const { minute, hour, day, month, dayOfWeek } = this.parseExpression();
+    
+    return (
+      minute.includes(date.getMinutes()) &&
+      hour.includes(date.getHours()) &&
+      day.includes(date.getDate()) &&
+      month.includes(date.getMonth() + 1) &&
+      dayOfWeek.includes(date.getDay())
+    );
+  }
+  
+  public start(): void {
+    if (this.interval) {
+      return;
+    }
+    
+    this.interval = setInterval(() => {
+      const now = new Date();
+      
+      // Only run once per minute
+      if (now.getMinutes() === this.lastRun.getMinutes() &&
+          now.getHours() === this.lastRun.getHours() &&
+          now.getDate() === this.lastRun.getDate() &&
+          now.getMonth() === this.lastRun.getMonth()) {
+        return;
+      }
+      
+      if (this.matchesDate(now)) {
+        this.lastRun = now;
+        this.callback();
+      }
+    }, 1000); // Check every second
+  }
+  
+  public stop(): void {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
+  }
+}
 
 // Task interface
 export interface CronTask {
@@ -21,7 +112,7 @@ export interface CronTask {
 
 // Scheduler class
 class Scheduler {
-  private tasks: Map<string, cron.ScheduledTask> = new Map();
+  private tasks: Map<string, { task: CronTask, scheduler: SimpleCron }> = new Map();
   
   /**
    * Add a new task to the scheduler
@@ -29,142 +120,136 @@ class Scheduler {
    * @param task - Task configuration
    * @returns The scheduled task
    */
-  public addTask(task: CronTask): cron.ScheduledTask {
+  public addTask(task: CronTask): { start: () => void; stop: () => void } {
     if (this.tasks.has(task.name)) {
       throw new Error(`Task with name "${task.name}" already exists`);
     }
     
     // Validate cron expression
-    if (!cron.validate(task.schedule)) {
+    if (!SimpleCron.validate(task.schedule)) {
       throw new Error(`Invalid cron expression: ${task.schedule}`);
     }
     
     // Create the scheduled task
-    const scheduledTask = cron.schedule(
+    const cronTask = new SimpleCron(
       task.schedule,
       async () => {
         try {
-          logger.info(`Running scheduled task: ${task.name}`);
+          console.info(`Running scheduled task: ${task.name}`);
           await task.handler();
-          logger.info(`Completed scheduled task: ${task.name}`);
+          console.info(`Completed scheduled task: ${task.name}`);
         } catch (error) {
-          logger.error(`Error in scheduled task ${task.name}:`, error);
+          console.error(`Error in scheduled task ${task.name}:`, error);
         }
       },
-      {
-        scheduled: true,
-        timezone: task.options?.timezone,
-      }
+      { timezone: task.options?.timezone }
     );
     
     // Store the task
-    this.tasks.set(task.name, scheduledTask);
+    this.tasks.set(task.name, { task, scheduler: cronTask });
     
-    // Run immediately if runOnInit is true
+    // Start the task
+    cronTask.start();
+    
+    // Run immediately if configured
     if (task.options?.runOnInit) {
-      try {
-        logger.info(`Running task ${task.name} on initialization`);
-        task.handler();
-      } catch (error) {
-        logger.error(`Error running task ${task.name} on initialization:`, error);
-      }
+      setTimeout(async () => {
+        try {
+          console.info(`Running scheduled task on init: ${task.name}`);
+          await task.handler();
+          console.info(`Completed scheduled task on init: ${task.name}`);
+        } catch (error) {
+          console.error(`Error in scheduled task on init ${task.name}:`, error);
+        }
+      }, 0);
     }
     
-    return scheduledTask;
+    return {
+      start: () => cronTask.start(),
+      stop: () => cronTask.stop(),
+    };
   }
   
   /**
-   * Get a scheduled task by name
+   * Remove a task from the scheduler
    * 
    * @param name - Task name
-   * @returns The scheduled task or undefined if not found
    */
-  public getTask(name: string): cron.ScheduledTask | undefined {
-    return this.tasks.get(name);
-  }
-  
-  /**
-   * Start a task by name
-   * 
-   * @param name - Task name
-   * @returns True if the task was started, false if not found
-   */
-  public startTask(name: string): boolean {
+  public removeTask(name: string): void {
     const task = this.tasks.get(name);
     
     if (task) {
-      task.start();
-      logger.info(`Started scheduled task: ${name}`);
-      return true;
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Stop a task by name
-   * 
-   * @param name - Task name
-   * @returns True if the task was stopped, false if not found
-   */
-  public stopTask(name: string): boolean {
-    const task = this.tasks.get(name);
-    
-    if (task) {
-      task.stop();
-      logger.info(`Stopped scheduled task: ${name}`);
-      return true;
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Remove a task by name
-   * 
-   * @param name - Task name
-   * @returns True if the task was removed, false if not found
-   */
-  public removeTask(name: string): boolean {
-    const task = this.tasks.get(name);
-    
-    if (task) {
-      task.stop();
+      task.scheduler.stop();
       this.tasks.delete(name);
-      logger.info(`Removed scheduled task: ${name}`);
-      return true;
     }
-    
-    return false;
   }
   
   /**
-   * Get all scheduled tasks
+   * Start a task
    * 
-   * @returns Map of all tasks
+   * @param name - Task name
    */
-  public getAllTasks(): Map<string, cron.ScheduledTask> {
-    return this.tasks;
+  public startTask(name: string): void {
+    const task = this.tasks.get(name);
+    
+    if (task) {
+      task.scheduler.start();
+    } else {
+      throw new Error(`Task with name "${name}" not found`);
+    }
+  }
+  
+  /**
+   * Stop a task
+   * 
+   * @param name - Task name
+   */
+  public stopTask(name: string): void {
+    const task = this.tasks.get(name);
+    
+    if (task) {
+      task.scheduler.stop();
+    } else {
+      throw new Error(`Task with name "${name}" not found`);
+    }
+  }
+  
+  /**
+   * Get all tasks
+   * 
+   * @returns All tasks
+   */
+  public getTasks(): CronTask[] {
+    return Array.from(this.tasks.values()).map(({ task }) => task);
+  }
+  
+  /**
+   * Get a task by name
+   * 
+   * @param name - Task name
+   * @returns The task or undefined if not found
+   */
+  public getTask(name: string): CronTask | undefined {
+    const task = this.tasks.get(name);
+    return task?.task;
   }
   
   /**
    * Start all tasks
    */
   public startAll(): void {
-    this.tasks.forEach((task, name) => {
-      task.start();
-      logger.info(`Started scheduled task: ${name}`);
-    });
+    for (const { scheduler } of this.tasks.values()) {
+      scheduler.start();
+    }
   }
   
   /**
    * Stop all tasks
    */
   public stopAll(): void {
-    this.tasks.forEach((task, name) => {
-      task.stop();
-      logger.info(`Stopped scheduled task: ${name}`);
-    });
+    for (const { scheduler } of this.tasks.values()) {
+      scheduler.stop();
+    }
   }
 }
 
@@ -173,19 +258,23 @@ export const scheduler = new Scheduler();
 
 /**
  * Cron scheduler plugin for Elysia
+ * 
+ * @param tasks - Initial tasks to schedule
+ * @returns Elysia plugin
  */
 export function setupCron(tasks: CronTask[] = []) {
-  return (app: Elysia) => {
-    // Register tasks
-    tasks.forEach(task => {
-      scheduler.addTask(task);
+  return new Elysia({ name: 'elysium-cron' })
+    .decorate('scheduler', scheduler)
+    .on('start', () => {
+      // Schedule initial tasks
+      for (const task of tasks) {
+        scheduler.addTask(task);
+      }
+    })
+    .on('stop', () => {
+      // Stop all tasks
+      scheduler.stopAll();
     });
-    
-    // Add scheduler to app state
-    app = app.state('scheduler', scheduler);
-    
-    return app;
-  };
 }
 
 export default { setupCron, scheduler };

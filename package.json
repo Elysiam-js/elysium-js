@@ -1,33 +1,49 @@
 {
   "name": "elysium-js",
   "version": "0.1.0",
-  "description": "A full-stack BETH (Bun, Elysia, Turso, HTMX) application",
-  "module": "src/index.ts",
-  "type": "module",
+  "description": "A modern web framework for Bun built on Elysia",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir ./dist",
     "test": "bun test",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "prepublishOnly": "bun run build"
   },
   "bin": {
     "els": "./bin/els.js"
   },
+  "files": [
+    "dist",
+    "bin",
+    "template"
+  ],
+  "keywords": [
+    "bun",
+    "elysia",
+    "web",
+    "framework",
+    "htmx",
+    "turso"
+  ],
+  "author": "Elysium Team",
+  "license": "MIT",
   "dependencies": {
-    "elysia": "^0.7.30",
-    "@elysiajs/html": "^0.7.3",
-    "@elysiajs/static": "^0.7.1",
-    "@libsql/client": "^0.4.0-pre.5",
-    "drizzle-orm": "^0.28.6",
-    "drizzle-kit": "^0.19.13"
+    "@elysiajs/html": "0.7.3",
+    "@elysiajs/static": "0.7.1",
+    "elysia": "0.7.31",
+    "react": "18.2.0"
   },
   "devDependencies": {
-    "bun-types": "latest",
-    "typescript": "^5.3.3",
-    "vitepress": "^1.0.0-rc.40",
-    "vue": "^3.3.11"
+    "@types/node": "20.8.2",
+    "tsup": "7.2.0",
+    "typescript": "5.2.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

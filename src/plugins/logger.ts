@@ -5,6 +5,8 @@
  */
 
 import { Elysia } from 'elysia';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Log levels
@@ -49,154 +51,215 @@ export class Logger {
   }
   
   /**
-   * Log a debug message
-   */
-  debug(message: string, ...args: any[]): void {
-    if (this.shouldLog(LogLevel.DEBUG)) {
-      this.log(LogLevel.DEBUG, message, ...args);
-    }
-  }
-  
-  /**
-   * Log an info message
-   */
-  info(message: string, ...args: any[]): void {
-    if (this.shouldLog(LogLevel.INFO)) {
-      this.log(LogLevel.INFO, message, ...args);
-    }
-  }
-  
-  /**
-   * Log a warning message
-   */
-  warn(message: string, ...args: any[]): void {
-    if (this.shouldLog(LogLevel.WARN)) {
-      this.log(LogLevel.WARN, message, ...args);
-    }
-  }
-  
-  /**
-   * Log an error message
-   */
-  error(message: string | Error, ...args: any[]): void {
-    if (this.shouldLog(LogLevel.ERROR)) {
-      const errorMessage = message instanceof Error ? message.stack || message.message : message;
-      this.log(LogLevel.ERROR, errorMessage, ...args);
-    }
-  }
-  
-  /**
-   * Create a child logger with a different prefix
-   */
-  child(prefix: string): Logger {
-    return new Logger({
-      level: this.level,
-      prefix: `${this.prefix}:${prefix}`,
-      timestamp: this.timestamp,
-      colorize: this.colorize,
-      logToFile: this.logToFile,
-      logFilePath: this.logFilePath,
-    });
-  }
-  
-  /**
    * Set the log level
+   * 
+   * @param level - Log level
    */
-  setLevel(level: LogLevel): void {
+  public setLevel(level: LogLevel): void {
     this.level = level;
   }
   
   /**
-   * Check if a log level should be logged
+   * Get the current log level
+   * 
+   * @returns Current log level
    */
-  private shouldLog(level: LogLevel): boolean {
+  public getLevel(): LogLevel {
+    return this.level;
+  }
+  
+  /**
+   * Check if a log level is enabled
+   * 
+   * @param level - Log level to check
+   * @returns True if the log level is enabled
+   */
+  private isLevelEnabled(level: LogLevel): boolean {
     const levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
-    return levels.indexOf(level) >= levels.indexOf(this.level);
+    const currentLevelIndex = levels.indexOf(this.level);
+    const targetLevelIndex = levels.indexOf(level);
+    
+    return targetLevelIndex >= currentLevelIndex;
   }
   
   /**
-   * Format and log a message
+   * Format a log message
+   * 
+   * @param level - Log level
+   * @param message - Log message
+   * @param args - Additional arguments
+   * @returns Formatted log message
    */
-  private log(level: LogLevel, message: string, ...args: any[]): void {
-    const timestamp = this.timestamp ? `[${new Date().toISOString()}]` : '';
-    const prefix = `[${this.prefix}]`;
-    const levelStr = `[${level.toUpperCase()}]`;
+  private formatMessage(level: LogLevel, message: string, args: any[]): string {
+    let formattedMessage = '';
     
-    let formattedMessage = `${timestamp} ${prefix} ${levelStr} ${message}`;
+    // Add timestamp if enabled
+    if (this.timestamp) {
+      formattedMessage += `[${new Date().toISOString()}] `;
+    }
     
+    // Add prefix and level
+    formattedMessage += `[${this.prefix}] [${level.toUpperCase()}] `;
+    
+    // Add message
+    formattedMessage += message;
+    
+    // Add additional arguments
     if (args.length > 0) {
-      formattedMessage += ` ${args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg) : arg
-      ).join(' ')}`;
+      formattedMessage += ' ' + args.map(arg => {
+        if (arg instanceof Error) {
+          return arg.stack || arg.message;
+        } else if (typeof arg === 'object') {
+          return JSON.stringify(arg);
+        } else {
+          return String(arg);
+        }
+      }).join(' ');
     }
     
-    if (this.colorize) {
-      formattedMessage = this.colorizeMessage(level, formattedMessage);
-    }
-    
-    switch (level) {
-      case LogLevel.DEBUG:
-        console.debug(formattedMessage);
-        break;
-      case LogLevel.INFO:
-        console.info(formattedMessage);
-        break;
-      case LogLevel.WARN:
-        console.warn(formattedMessage);
-        break;
-      case LogLevel.ERROR:
-        console.error(formattedMessage);
-        break;
-    }
-    
-    if (this.logToFile) {
-      this.writeToFile(formattedMessage);
-    }
-  }
-  
-  /**
-   * Colorize a log message
-   */
-  private colorizeMessage(level: LogLevel, message: string): string {
-    switch (level) {
-      case LogLevel.DEBUG:
-        return `\x1b[34m${message}\x1b[0m`; // Blue
-      case LogLevel.INFO:
-        return `\x1b[32m${message}\x1b[0m`; // Green
-      case LogLevel.WARN:
-        return `\x1b[33m${message}\x1b[0m`; // Yellow
-      case LogLevel.ERROR:
-        return `\x1b[31m${message}\x1b[0m`; // Red
-      default:
-        return message;
-    }
+    return formattedMessage;
   }
   
   /**
    * Write a log message to a file
+   * 
+   * @param message - Log message
    */
   private writeToFile(message: string): void {
-    // In a real implementation, this would write to a file
-    // For simplicity, we're just logging to console
-    console.log(`[FILE LOG] ${message}`);
+    if (!this.logToFile) {
+      return;
+    }
+    
+    try {
+      // Create directory if it doesn't exist
+      const dir = path.dirname(this.logFilePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      // Append message to file
+      fs.appendFileSync(this.logFilePath, message + '\n');
+    } catch (error) {
+      console.error('Failed to write to log file:', error);
+    }
+  }
+  
+  /**
+   * Log a debug message
+   * 
+   * @param message - Log message
+   * @param args - Additional arguments
+   */
+  public debug(message: string, ...args: any[]): void {
+    if (!this.isLevelEnabled(LogLevel.DEBUG)) {
+      return;
+    }
+    
+    const formattedMessage = this.formatMessage(LogLevel.DEBUG, message, args);
+    
+    if (this.colorize) {
+      console.debug('\x1b[90m' + formattedMessage + '\x1b[0m');
+    } else {
+      console.debug(formattedMessage);
+    }
+    
+    this.writeToFile(formattedMessage);
+  }
+  
+  /**
+   * Log an info message
+   * 
+   * @param message - Log message
+   * @param args - Additional arguments
+   */
+  public info(message: string, ...args: any[]): void {
+    if (!this.isLevelEnabled(LogLevel.INFO)) {
+      return;
+    }
+    
+    const formattedMessage = this.formatMessage(LogLevel.INFO, message, args);
+    
+    if (this.colorize) {
+      console.info('\x1b[32m' + formattedMessage + '\x1b[0m');
+    } else {
+      console.info(formattedMessage);
+    }
+    
+    this.writeToFile(formattedMessage);
+  }
+  
+  /**
+   * Log a warning message
+   * 
+   * @param message - Log message
+   * @param args - Additional arguments
+   */
+  public warn(message: string, ...args: any[]): void {
+    if (!this.isLevelEnabled(LogLevel.WARN)) {
+      return;
+    }
+    
+    const formattedMessage = this.formatMessage(LogLevel.WARN, message, args);
+    
+    if (this.colorize) {
+      console.warn('\x1b[33m' + formattedMessage + '\x1b[0m');
+    } else {
+      console.warn(formattedMessage);
+    }
+    
+    this.writeToFile(formattedMessage);
+  }
+  
+  /**
+   * Log an error message
+   * 
+   * @param message - Log message
+   * @param args - Additional arguments
+   */
+  public error(message: string, ...args: any[]): void {
+    if (!this.isLevelEnabled(LogLevel.ERROR)) {
+      return;
+    }
+    
+    const formattedMessage = this.formatMessage(LogLevel.ERROR, message, args);
+    
+    if (this.colorize) {
+      console.error('\x1b[31m' + formattedMessage + '\x1b[0m');
+    } else {
+      console.error(formattedMessage);
+    }
+    
+    this.writeToFile(formattedMessage);
   }
 }
 
 /**
  * Create a logger middleware for Elysia
+ * 
+ * @param options - Logger options
+ * @returns Elysia middleware
  */
 export function loggerMiddleware(options: LoggerOptions = {}) {
-  const logger = new Logger(options);
+  const loggerInstance = new Logger(options);
   
-  return (app: Elysia) => 
-    app.onRequest(({ request }) => {
-      logger.info(`${request.method} ${request.url}`);
+  return new Elysia({ name: 'elysium-logger' })
+    .onRequest(({ request }) => {
+      const startTime = Date.now();
+      request.startTime = startTime;
     })
     .onResponse(({ request, response }) => {
-      logger.info(`${request.method} ${request.url} - ${response.status}`);
+      const endTime = Date.now();
+      const duration = endTime - (request.startTime || endTime);
+      
+      loggerInstance.info(
+        `${request.method} ${request.url} - ${response.status} - ${duration}ms`
+      );
     })
-    .onError(({ request, error }) => {
-      logger.error(`${request.method} ${request.url} - ${error.message}`, error);
+    .onError(({ error, request }) => {
+      loggerInstance.error(
+        `${request.method} ${request.url} - ${error.message}`,
+        error
+      );
     });
 }
 

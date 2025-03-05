@@ -4,7 +4,8 @@
  * Provides core functionality for Elysium.js components
  */
 
-import { useState as reactUseState, useEffect } from 'react';
+import React from 'react';
+const { useState: reactUseState, useEffect } = React;
 
 /**
  * State management hook similar to React's useState
@@ -63,7 +64,10 @@ export function useStore<T>(store: { getState: () => T, subscribe: (listener: (s
   const [state, setState] = useState(store.getState());
   
   onMount(() => {
-    const unsubscribe = store.subscribe(setState);
+    const unsubscribe = store.subscribe(newState => {
+      setState(newState);
+    });
+    
     return unsubscribe;
   });
   
@@ -73,33 +77,36 @@ export function useStore<T>(store: { getState: () => T, subscribe: (listener: (s
 /**
  * Create a derived store that depends on other stores
  */
-export function derived<T, U>(
+export function derived<U>(
   stores: Array<{ getState: () => any, subscribe: (listener: (state: any) => void) => () => void }>,
   fn: (...values: any[]) => U
 ) {
   const derivedStore = createStore<U>(fn(...stores.map(store => store.getState())));
   
-  stores.forEach((store, i) => {
+  stores.forEach(store => {
     store.subscribe(() => {
-      const values = stores.map(s => s.getState());
-      derivedStore.setState(fn(...values));
+      derivedStore.setState(fn(...stores.map(store => store.getState())));
     });
   });
   
-  return derivedStore;
+  return {
+    getState: derivedStore.getState,
+    subscribe: derivedStore.subscribe,
+  };
 }
 
 /**
  * Create a writable store with methods to update it
  */
 export function writable<T>(initialValue: T) {
-  const store = createStore(initialValue);
+  const store = createStore<T>(initialValue);
   
   return {
     ...store,
     update: (fn: (value: T) => T) => {
       store.setState(fn(store.getState()));
-    }
+    },
+    set: store.setState,
   };
 }
 
@@ -113,7 +120,7 @@ export async function fetchData<T>(url: string, options?: RequestInit): Promise<
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
   
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 /**
@@ -130,7 +137,14 @@ export function handleSubmit(
     const data: Record<string, any> = {};
     
     formData.forEach((value, key) => {
-      data[key] = value;
+      if (data[key]) {
+        if (!Array.isArray(data[key])) {
+          data[key] = [data[key]];
+        }
+        data[key].push(value);
+      } else {
+        data[key] = value;
+      }
     });
     
     await callback(data);
@@ -144,6 +158,8 @@ export function initHtmx(element: HTMLElement) {
   // Check if HTMX is loaded
   if (typeof window !== 'undefined' && window.htmx) {
     window.htmx.process(element);
+  } else {
+    console.warn('HTMX is not loaded. Make sure to include it in your HTML.');
   }
 }
 
@@ -151,43 +167,57 @@ export function initHtmx(element: HTMLElement) {
  * Create a reactive signal (similar to SolidJS)
  */
 export function createSignal<T>(initialValue: T): [() => T, (value: T) => void] {
-  const store = createStore(initialValue);
-  return [store.getState, store.setState];
+  const store = writable<T>(initialValue);
+  return [store.getState, store.set];
 }
 
 /**
  * Create a computed value that depends on signals
  */
 export function createComputed<T>(fn: () => T, deps: Array<() => any>): () => T {
-  const store = createStore(fn());
-  
-  deps.forEach(dep => {
-    onUpdate(() => {
-      store.setState(fn());
-    }, [dep()]);
+  const signals = deps.map(dep => {
+    const [get, set] = createSignal(dep());
+    return { get, set };
   });
   
-  return store.getState;
+  const [get, set] = createSignal(fn());
+  
+  deps.forEach((dep, i) => {
+    createEffect(() => {
+      signals[i].set(dep());
+      set(fn());
+    });
+  });
+  
+  return get;
 }
 
 /**
  * Create a memoized value
  */
 export function createMemo<T>(fn: () => T, deps: any[] = []): () => T {
-  const [value, setValue] = useState<T>(fn());
+  let lastValue: T;
+  let lastDeps: any[] = [];
+  let initialized = false;
   
-  onUpdate(() => {
-    setValue(fn());
-  }, deps);
-  
-  return () => value;
+  return () => {
+    const depsChanged = !initialized || deps.some((dep, i) => dep !== lastDeps[i]);
+    
+    if (depsChanged) {
+      lastValue = fn();
+      lastDeps = [...deps];
+      initialized = true;
+    }
+    
+    return lastValue;
+  };
 }
 
 /**
  * Create an effect that runs when dependencies change
  */
 export function createEffect(fn: () => void | (() => void), deps: any[] = []): void {
-  onUpdate(fn, deps);
+  useEffect(fn, deps);
 }
 
 /**
@@ -197,17 +227,19 @@ export function createResource<T, U>(
   source: () => U,
   fetcher: (source: U) => Promise<T>
 ): [() => T | undefined, { loading: boolean, error: Error | null }] {
-  const [data, setData] = useState<T | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [data, setData] = createSignal<T | undefined>(undefined);
+  const [loading, setLoading] = createSignal(false);
+  const [error, setError] = createSignal<Error | null>(null);
   
-  onUpdate(() => {
-    const fetchData = async () => {
+  createEffect(() => {
+    const currentSource = source();
+    
+    const fetchResource = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        const result = await fetcher(source());
+        const result = await fetcher(currentSource);
         setData(result);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -216,10 +248,16 @@ export function createResource<T, U>(
       }
     };
     
-    fetchData();
-  }, [source()]);
+    fetchResource();
+  }, [source]);
   
-  return [() => data, { loading, error }];
+  return [
+    data,
+    {
+      get loading() { return loading(); },
+      get error() { return error(); }
+    }
+  ];
 }
 
 // Export all as default for easier importing

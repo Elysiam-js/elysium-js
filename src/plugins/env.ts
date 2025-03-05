@@ -4,10 +4,65 @@
  * Provides support for loading and accessing environment variables in your Elysium.js application
  */
 
-import { config } from 'dotenv';
-import { expand } from 'dotenv-expand';
 import fs from 'fs';
 import path from 'path';
+
+// Simple dotenv implementation
+function parseDotenv(content: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    // Skip comments and empty lines
+    if (line.trim().startsWith('#') || !line.trim()) {
+      continue;
+    }
+    
+    // Parse key-value pairs
+    const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+    if (match) {
+      const key = match[1];
+      let value = match[2] || '';
+      
+      // Remove quotes if present
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1);
+      } else if (value.startsWith("'") && value.endsWith("'")) {
+        value = value.slice(1, -1);
+      }
+      
+      // Replace escaped newlines
+      value = value.replace(/\\n/g, '\n');
+      
+      result[key] = value;
+    }
+  }
+  
+  return result;
+}
+
+// Simple dotenv-expand implementation
+function expandEnv(env: Record<string, string>): Record<string, string> {
+  const result = { ...env };
+  
+  // Expand variables
+  for (const key in result) {
+    let value = result[key];
+    
+    // Replace ${VAR} or $VAR with their values
+    value = value.replace(/\${([^}]+)}/g, (_, varName) => {
+      return result[varName] || process.env[varName] || '';
+    });
+    
+    value = value.replace(/\$([a-zA-Z0-9_]+)/g, (_, varName) => {
+      return result[varName] || process.env[varName] || '';
+    });
+    
+    result[key] = value;
+  }
+  
+  return result;
+}
 
 /**
  * Environment variables configuration
@@ -47,36 +102,57 @@ export function loadEnv(options: EnvConfig = {}): Record<string, string> {
   
   // Load base .env file
   const baseEnvPath = path.resolve(process.cwd(), envPath);
+  let envVars: Record<string, string> = {};
+  
   if (fs.existsSync(baseEnvPath)) {
-    const baseEnv = config({ path: baseEnvPath, override });
-    expand(baseEnv);
+    const content = fs.readFileSync(baseEnvPath, 'utf-8');
+    const parsed = parseDotenv(content);
+    envVars = { ...envVars, ...parsed };
   }
   
   // Load environment-specific .env file
   const envSpecificPath = path.resolve(process.cwd(), `${envPath}.${environment}`);
   if (fs.existsSync(envSpecificPath)) {
-    const envSpecific = config({ path: envSpecificPath, override });
-    expand(envSpecific);
+    const content = fs.readFileSync(envSpecificPath, 'utf-8');
+    const parsed = parseDotenv(content);
+    envVars = { ...envVars, ...parsed };
   }
   
-  // Load local .env file (for development overrides, not committed to version control)
+  // Load .env.local file (which is always loaded and overrides everything except .env.*.local)
   const localEnvPath = path.resolve(process.cwd(), `${envPath}.local`);
   if (fs.existsSync(localEnvPath)) {
-    const localEnv = config({ path: localEnvPath, override });
-    expand(localEnv);
+    const content = fs.readFileSync(localEnvPath, 'utf-8');
+    const parsed = parseDotenv(content);
+    envVars = { ...envVars, ...parsed };
   }
   
-  // Extract public environment variables
-  const publicEnv: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (key.startsWith(publicPrefix) && value !== undefined) {
-      // Remove the prefix for client-side usage
-      const publicKey = key.replace(publicPrefix, '');
-      publicEnv[publicKey] = value;
+  // Load environment-specific local .env file
+  const envSpecificLocalPath = path.resolve(process.cwd(), `${envPath}.${environment}.local`);
+  if (fs.existsSync(envSpecificLocalPath)) {
+    const content = fs.readFileSync(envSpecificLocalPath, 'utf-8');
+    const parsed = parseDotenv(content);
+    envVars = { ...envVars, ...parsed };
+  }
+  
+  // Expand variables
+  envVars = expandEnv(envVars);
+  
+  // Set environment variables
+  for (const key in envVars) {
+    if (override || !process.env[key]) {
+      process.env[key] = envVars[key];
     }
   }
   
-  return publicEnv;
+  // Filter public variables
+  const publicVars: Record<string, string> = {};
+  for (const key in envVars) {
+    if (key.startsWith(publicPrefix)) {
+      publicVars[key] = envVars[key];
+    }
+  }
+  
+  return publicVars;
 }
 
 /**
@@ -87,7 +163,7 @@ export function loadEnv(options: EnvConfig = {}): Record<string, string> {
  * @returns The environment variable value or the default value
  */
 export function getEnv(key: string, defaultValue?: string): string | undefined {
-  return process.env[key] || defaultValue;
+  return process.env[key] !== undefined ? process.env[key] : defaultValue;
 }
 
 /**
@@ -99,12 +175,18 @@ export function getEnv(key: string, defaultValue?: string): string | undefined {
  */
 export function getEnvNumber(key: string, defaultValue?: number): number | undefined {
   const value = process.env[key];
+  
   if (value === undefined) {
     return defaultValue;
   }
   
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? defaultValue : parsed;
+  const num = Number(value);
+  
+  if (Number.isNaN(num)) {
+    return defaultValue;
+  }
+  
+  return num;
 }
 
 /**
@@ -116,11 +198,12 @@ export function getEnvNumber(key: string, defaultValue?: number): number | undef
  */
 export function getEnvBoolean(key: string, defaultValue?: boolean): boolean | undefined {
   const value = process.env[key];
+  
   if (value === undefined) {
     return defaultValue;
   }
   
-  return ['true', '1', 'yes'].includes(value.toLowerCase());
+  return value.toLowerCase() === 'true' || value === '1';
 }
 
 /**
@@ -144,4 +227,4 @@ export const env = {
   has: hasEnv,
 };
 
-export default { loadEnv, getEnv, getEnvNumber, getEnvBoolean, hasEnv, env };
+export default env;
